@@ -6,7 +6,9 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "build:prod": "ng build --configuration production --base-href /logiciel-retraite/",
+    "deploy": "npm run build:prod && angular-cli-ghpages --dir=dist/retraite/browser --branch=deploy"
   },
   "prettier": {
     "printWidth": 100,
@@ -39,6 +41,7 @@
     "@angular/cli": "^20.3.9",
     "@angular/compiler-cli": "^20.3.0",
     "@types/jasmine": "~5.1.0",
+    "angular-cli-ghpages": "^2.0.3",
     "jasmine-core": "~5.9.0",
     "karma": "~6.4.0",
     "karma-chrome-launcher": "~3.2.0",
