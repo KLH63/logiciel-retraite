@@ -1,53 +1,91 @@
-<div class="container" style="max-width: 820px; margin: 24px auto;">
-  <h3 style="margin-bottom: 16px;">Calculette <span style="color:#f97316;">Retraite</span></h3>
+<form [formGroup]="form" (ngSubmit)="calculer()" class="card" style="padding:16px; border:1px solid #e5e7eb; border-radius:12px;">
+  <div style="display:grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap:12px;">
+    <!-- Champs existants -->
+    <label>Date de naissance
+      <input type="date" formControlName="birthDate" (change)="recalculerRegles()" />
+    </label>
 
-  <form [formGroup]="form" (ngSubmit)="calculer()" class="card" style="padding:16px; border:1px solid #e5e7eb; border-radius:12px;">
-    <div style="display:grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap:12px;">
-      <label>Date de naissance
-        <input type="date" formControlName="birthDate" (change)="recalculerRegles()" />
-      </label>
+    <label>Âge de départ
+      <input type="number" formControlName="ageCible" />
+    </label>
 
-      <label>Âge de départ
-        <input type="number" formControlName="ageCible" />
-      </label>
+    <label>Trimestres acquis
+      <input type="number" formControlName="trimestres" />
+    </label>
 
-      <label>Trimestres acquis
-        <input type="number" formControlName="trimestres" />
-      </label>
+    <label>Points complémentaires
+      <input type="number" formControlName="points" />
+    </label>
 
-      <label>Points complémentaires
-        <input type="number" formControlName="points" />
-      </label>
+    <label>Salaire Annuel Moyen (SAM) €
+      <input type="number" formControlName="sam" />
+    </label>
 
-      <label>Salaire Annuel Moyen (SAM) €
-        <input type="number" formControlName="sam" />
-      </label>
+    <label>Nombre d'enfants
+      <input type="number" formControlName="enfants" />
+    </label>
 
-      <label>Nombre d'enfants
-        <input type="number" formControlName="enfants" />
-      </label>
+    <!-- ✅ Nouveaux champs -->
+    <label>Trimestres AVA
+      <input type="number" formControlName="trimestresAVA" />
+    </label>
+
+    <label>Trimestres AVPF
+      <input type="number" formControlName="trimestresAVPF" />
+    </label>
+
+    <label>
+      <input type="checkbox" formControlName="carriereLongue" /> Carrière longue
+    </label>
+
+    <label>
+      <input type="checkbox" formControlName="handicape" /> Travailleur handicapé (RATH)
+    </label>
+
+    <label>
+      <input type="checkbox" formControlName="invalide" /> Invalide / Inapte
+    </label>
+
+    <label>Incapacité permanente (%)
+      <input type="number" formControlName="incapacite" />
+    </label>
+
+    <!-- Options conditionnelles -->
+    <div *ngIf="(form.get('incapacite')?.value ?? 0) >= 10 && (form.get('incapacite')?.value ?? 0) < 20" style="grid-column: span 2;">
+      <p style="margin:4px 0;">Conditions incapacité 10–19% :</p>
+      <label><input type="checkbox" formControlName="exposition17ans" /> ≥17 ans d’exposition</label>
+      <label><input type="checkbox" formControlName="avisMed" /> Avis favorable médecin conseil</label>
+      <label><input type="checkbox" formControlName="commissionOK" /> Commission pluridisciplinaire OK</label>
     </div>
+
 
     <div style="margin-top:8px; color:#475569; font-size:14px;">
-      <b>Âge légal (dérivé)</b> : {{ reglesDerivees.legalAge | number:'1.2-2' }} ans
-      — <b>Trimestres requis</b> : {{ reglesDerivees.requiredQuarters }}
-    </div>
-
-    <div style="margin-top:12px; display:flex; gap:8px;">
-      <button type="submit">Calculer</button>
-      <button type="button" (click)="form.reset({birthDate:null,ageCible:64,trimestres:0,points:0,sam:0,enfants:0}); resultat=null; reglesDerivees=regles">Effacer</button>
-    </div>
-  </form>
-
-  <div *ngIf="resultat" class="card" style="margin-top:12px; padding:16px; border:1px solid #e5e7eb; border-radius:12px;">
-    <h4 style="margin-top:0;">Résultat</h4>
-    <ul style="line-height:1.8;">
-      <li><b>Taux appliqué</b> : {{ (resultat.taux*100) | number:'1.0-2' }} %</li>
-      <li><b>Prorata (trimestres/requis)</b> : {{ (resultat.prorata*100) | number:'1.0-2' }} %</li>
-      <li><b>Base (annuelle)</b> : {{ fmt(resultat.baseAnnual) }} €</li>
-      <li><b>Complémentaire (annuelle)</b> : {{ fmt(resultat.compAnnual) }} €</li>
-      <li><b>Total brut</b> : {{ fmt(resultat.gross) }} €</li>
-      <li><b>Total net estimé</b> : {{ fmt(resultat.net) }} €</li>
-    </ul>
+    <b>Âge légal (dérivé)</b> : {{ reglesDerivees.legalAge | number:'1.2-2' }} ans —
+    <b>Trimestres requis</b> : {{ reglesDerivees.requiredQuarters }}
   </div>
+
+  <div style="margin-top:12px; display:flex; gap:8px;">
+    <button type="submit">Calculer</button>
+    <button type="button"
+            (click)="form.reset({
+        birthDate:null, ageCible:64, trimestres:0, points:0, sam:0, enfants:0,
+        trimestresAVA:0, trimestresAVPF:0, carriereLongue:false, handicape:false,
+        invalide:false, incapacite:0, exposition17ans:false, avisMed:false, commissionOK:false
+      }); resultat=null; reglesDerivees=regles;">
+      Effacer
+    </button>
+  </div>
+  </div>
+</form>
+
+<div *ngIf="resultat" class="card" style="margin-top:16px; padding:12px; border:1px solid #e5e7eb; border-radius:12px;">
+  <h3 style="margin-top:0;">Résultat pension</h3>
+  <p><b>Taux</b> : {{ resultat.taux | number:'1.2-2' }}</p>
+  <p><b>Prorata</b> : {{ resultat.prorata | number:'1.2-2' }}</p>
+  <p><b>SAM</b> : {{ resultat.sam | number:'1.0-0' }} €</p>
+  <p><b>Base annuelle</b> : {{ resultat.baseAnnual | number:'1.0-0' }} €</p>
+  <p><b>Complémentaire</b> : {{ resultat.compAnnual | number:'1.0-0' }} €</p>
+  <p><b>Brut annuel</b> : {{ resultat.gross | number:'1.0-0' }} €</p>
+  <p><b>Net annuel</b> : {{ resultat.net | number:'1.0-0' }} €</p>
 </div>
+

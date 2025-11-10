@@ -8,14 +8,20 @@ export const REGLES_2025: Regles = {
   minRate: 0.425,
   decotePerMissingQ: 0.00625,
   decoteCapQ: 12,
-  surcotePerExtraQ: 0.0125,
+  surcotePerExtraQ: 0.0125, // 1.25% par trimestre
   childBonusPercent: 0.10,
   pointValue: 1.4159,
   csgRate: 0.086,
+
+  // compléments
+  earlyLongCareerAge: 60,
+  earlyDisabilityAge: 60,
+  earlyHandicapAge: 55,
+  earlyIncapacityOffset: 2,
 };
 
 /** Convertit "X ans Y mois" en années décimales (ex: 62 ans 3 mois -> 62.25) */
-function yPlusMonths(y: number, m: number) { return y + m / 12; }
+export function yPlusMonths(y: number, m: number) { return y + m / 12; }
 
 /**
  * Applique le barème âge légal / trimestres requis selon la date de naissance.
@@ -28,7 +34,6 @@ export function reglesPourNaissance(base: Regles, birthISO?: string | null): Reg
 
   const y = d.getFullYear();
   const m = d.getMonth() + 1; // 1..12
-  const day = d.getDate();
 
   const r: Regles = { ...base };
 
@@ -37,13 +42,11 @@ export function reglesPourNaissance(base: Regles, birthISO?: string | null): Reg
     r.legalAge = 62;
     r.requiredQuarters = 167;
   } else if (y === 1961) {
-    // Jan 1 – Aug 31 1961
-    const isBeforeSep = (m < 9); // (septembre=9) -> 1 jan au 31 août
+    const isBeforeSep = (m < 9); // Jan 1 – Aug 31 1961
     if (isBeforeSep) {
       r.legalAge = 62;
       r.requiredQuarters = 168;
     } else {
-      // 1er septembre – 31 décembre 1961
       r.legalAge = yPlusMonths(62, 3); // 62 ans et 3 mois
       r.requiredQuarters = 169;
     }

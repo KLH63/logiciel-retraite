@@ -15,13 +15,23 @@ export class App {
   private fb = inject(FormBuilder);
 
   form = this.fb.group({
-    birthDate: [null as string | null],               // <-- NOUVEAU
-    ageCible: [64, [Validators.min(50), Validators.max(70)]],
-    trimestres: [0, [Validators.min(0)]],
-    points: [0, [Validators.min(0)]],
-    sam: [0, [Validators.min(0)]],
-    enfants: [0, [Validators.min(0)]],
+    birthDate: [null],
+    ageCible: [64],
+    trimestres: [0],
+    points: [0],
+    sam: [0],
+    enfants: [0],
+    trimestresAVA: [0],
+    trimestresAVPF: [0],
+    carriereLongue: [false],
+    handicape: [false],
+    invalide: [false],
+    incapacite: [0],
+    exposition17ans: [false],
+    avisMed: [false],
+    commissionOK: [false],
   });
+
 
   regles = REGLES_2025;       // règles en vigueur (base)
   reglesDerivees = REGLES_2025; // règles ajustées à la naissance (affichées)
@@ -43,6 +53,7 @@ export class App {
         points: Number(d.points || 0),
         sam: Number(d.sam || 0),
         enfants: Number(d.enfants || 0),
+        annees: []
       },
       this.reglesDerivees
     );
