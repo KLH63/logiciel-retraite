@@ -1,17 +1,17 @@
-<div class="container" style="max-width: 820px; margin: 24px auto;">
+<div class="container" style="max-width: 920px; margin: 24px auto;">
   <h3 style="margin-bottom: 16px;">Calculette <span style="color:#f97316;">Retraite</span></h3>
 
   <form [formGroup]="form" (ngSubmit)="calculer()" class="card" style="padding:16px; border:1px solid #e5e7eb; border-radius:12px;">
     <div style="display:grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap:12px;">
       <label>Date de naissance
-        <input type="date" formControlName="birthDate" (change)="recalculerRegles()" />
+        <input type="date" formControlName="birthDate" (change)="recomputeInfos()" />
       </label>
 
       <label>Âge de départ
-        <input type="number" formControlName="ageCible" />
+        <input type="number" formControlName="ageCible" (change)="recomputeInfos()" />
       </label>
 
-      <label>Trimestres acquis
+      <label>Trimestres (base)
         <input type="number" formControlName="trimestres" />
       </label>
 
@@ -28,26 +28,143 @@
       </label>
     </div>
 
-    <div style="margin-top:8px; color:#475569; font-size:14px;">
-      <b>Âge légal (dérivé)</b> : {{ reglesDerivees.legalAge | number:'1.2-2' }} ans
-      — <b>Trimestres requis</b> : {{ reglesDerivees.requiredQuarters }}
+    <hr>
+
+    <div style="display:grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap:12px;">
+      <label>AVA (trimestres)
+        <input type="number" formControlName="ava" (change)="recomputeInfos()" />
+      </label>
+      <label>AVPF (trimestres)
+        <input type="number" formControlName="avpf" (change)="recomputeInfos()" />
+      </label>
+      <div style="align-self:end; font-size:13px; color:#475569;">
+        Pris en compte globalement à hauteur de <b>4 T</b>.
+      </div>
     </div>
 
-    <div style="margin-top:12px; display:flex; gap:8px;">
+    <div style="margin-top:8px; font-size:13px; color:#475569;">
+      + AVA/AVPF comptés : <b>{{ addAvaAvpf }}</b> T — + C2P estimés : <b>{{ addC2P }}</b> T
+    </div>
+
+    <hr>
+
+    <div style="display:grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap:12px;">
+      <label>% Incapacité pro (IPP)
+        <input type="number" formControlName="incapPct" (change)="recomputeInfos()" />
+      </label>
+      <label>Nature
+        <select formControlName="incapType" (change)="recomputeInfos()">
+          <option value="AUCUN">Aucune</option>
+          <option value="MALADIE_PRO">Maladie professionnelle</option>
+          <option value="AT">Accident du travail</option>
+        </select>
+      </label>
+      <label *ngIf="form.get('incapType')?.value === 'AT' && (form.get('incapPct')?.value || 0) >= 20">
+        <input type="checkbox" formControlName="atControleOK" (change)="recomputeInfos()" />
+        Avis Contrôle Médical (AT ≥ 20%)
+      </label>
+    </div>
+
+    <div *ngIf="(form.get('incapPct')?.value || 0) >= 10 && (form.get('incapPct')?.value || 0) < 20"
+         style="display:grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap:12px; margin-top:8px;">
+      <label><input type="checkbox" formControlName="exp17ans" (change)="recomputeInfos()"> ≥ 17 ans d'exposition</label>
+      <label><input type="checkbox" formControlName="avisMCR" (change)="recomputeInfos()"> Avis du Médecin Conseil Régional</label>
+      <label><input type="checkbox" formControlName="commissionOK" (change)="recomputeInfos()"> Décision commission pluridisciplinaire</label>
+    </div>
+
+    <hr>
+
+    <div style="font-size:14px; color:#334155; margin-bottom:8px;">
+      <b>Âge légal (classique)</b> : {{ reglesDerivees.legalAge | number:'1.2-2' }} ans —
+      <b>Référence</b> : {{ reglesDerivees.requiredQuarters }} T
+    </div>
+
+    <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+      <label style="display:flex; gap:8px; align-items:center;">
+        <input type="checkbox" formControlName="handicap" (change)="recomputeInfos()" />
+        Handicap (RATH)
+      </label>
+
+      <!-- ✅ Saisie visible seulement si RATH -->
+      <div *ngIf="form.get('handicap')?.value" style="display:flex; gap:8px; align-items:center;">
+        <label>Trimestres <b>RATH cotisés</b>
+          <input type="number" formControlName="rathCotises" style="width:120px; margin-left:8px;" />
+        </label>
+        <span *ngIf="rathMinAge" style="font-size:13px; color:#475569;">
+          (Âge mini: <b>{{ rathMinAge }}</b> ans • Min requis à l’âge visé: <b>{{ rathMinCotises || '?' }}</b> T • Réf.: {{ rathFullRef || '—' }} T)
+        </span>
+      </div>
+
+      <span style="flex:1"></span>
       <button type="submit">Calculer</button>
-      <button type="button" (click)="form.reset({birthDate:null,ageCible:64,trimestres:0,points:0,sam:0,enfants:0}); resultat=null; reglesDerivees=regles">Effacer</button>
+      <button type="button" (click)="comparer()">Comparer normal vs RATH</button>
+      <button type="button"
+              (click)="form.reset({birthDate:null,ageCible:64,trimestres:0,points:0,sam:0,enfants:0,ava:0,avpf:0,
+                                   incapPct:0,incapType:'AUCUN',atControleOK:false,exp17ans:false,avisMCR:false,commissionOK:false,
+                                   handicap:false,rathCotises:0,c2pPoints:0});
+                       resultat=null; comparaison=null; recomputeInfos();">
+        Effacer
+      </button>
     </div>
   </form>
 
+  <!-- Résultat simple -->
   <div *ngIf="resultat" class="card" style="margin-top:12px; padding:16px; border:1px solid #e5e7eb; border-radius:12px;">
     <h4 style="margin-top:0;">Résultat</h4>
-    <ul style="line-height:1.8;">
-      <li><b>Taux appliqué</b> : {{ (resultat.taux*100) | number:'1.0-2' }} %</li>
-      <li><b>Prorata (trimestres/requis)</b> : {{ (resultat.prorata*100) | number:'1.0-2' }} %</li>
+    <div style="font-size:14px; color:#334155;">
+      Référence utilisée : <b>{{ resultat.requiredQuartersEffectif }}</b> T
+    </div>
+    <ul style="line-height:1.8; margin-top:8px;">
+      <li><b>Taux appliqué</b> (≤ 50%) : {{ (resultat.taux*100) | number:'1.0-2' }} %</li>
+      <li><b>Prorata</b> (trimestres / référence) : {{ (resultat.prorata*100) | number:'1.0-2' }} %</li>
       <li><b>Base (annuelle)</b> : {{ fmt(resultat.baseAnnual) }} €</li>
       <li><b>Complémentaire (annuelle)</b> : {{ fmt(resultat.compAnnual) }} €</li>
       <li><b>Total brut</b> : {{ fmt(resultat.gross) }} €</li>
       <li><b>Total net estimé</b> : {{ fmt(resultat.net) }} €</li>
     </ul>
+  </div>
+
+  <!-- Comparaison -->
+  <div *ngIf="comparaison" class="card" style="margin-top:12px; padding:16px; border:1px solid #e5e7eb; border-radius:12px;">
+    <h4 style="margin-top:0;">Comparaison</h4>
+    <table class="table table-sm" style="width:100%; border-collapse:collapse;">
+      <thead>
+      <tr>
+        <th style="text-align:left;">Scénario</th>
+        <th style="text-align:right;">Taux</th>
+        <th style="text-align:right;">Prorata</th>
+        <th style="text-align:right;">Base annuelle</th>
+        <th style="text-align:right;">Complémentaire</th>
+        <th style="text-align:right;">Brut</th>
+        <th style="text-align:right;">Net</th>
+      </tr>
+      </thead>
+      <tbody>
+      <tr>
+        <td>Normal</td>
+        <td style="text-align:right;">{{ (comparaison.normal.taux*100) | number:'1.0-2' }} %</td>
+        <td style="text-align:right;">{{ (comparaison.normal.prorata*100) | number:'1.0-2' }} %</td>
+        <td style="text-align:right;">{{ fmt(comparaison.normal.baseAnnual) }}</td>
+        <td style="text-align:right;">{{ fmt(comparaison.normal.compAnnual) }}</td>
+        <td style="text-align:right;">{{ fmt(comparaison.normal.gross) }}</td>
+        <td style="text-align:right;">{{ fmt(comparaison.normal.net) }}</td>
+      </tr>
+      <tr>
+        <td>RATH</td>
+        <td style="text-align:right;">{{ (comparaison.rath.taux*100) | number:'1.0-2' }} %</td>
+        <td style="text-align:right;">{{ (comparaison.rath.prorata*100) | number:'1.0-2' }} %</td>
+        <td style="text-align:right;">{{ fmt(comparaison.rath.baseAnnual) }}</td>
+        <td style="text-align:right;">{{ fmt(comparaison.rath.compAnnual) }}</td>
+        <td style="text-align:right;">{{ fmt(comparaison.rath.gross) }}</td>
+        <td style="text-align:right;">{{ fmt(comparaison.rath.net) }}</td>
+      </tr>
+      </tbody>
+    </table>
+
+    <div style="margin-top:8px;">
+      <b>Plus avantageux :</b>
+      <span *ngIf="comparaison.rath.net > comparaison.normal.net" style="color:#16a34a;">RATH</span>
+      <span *ngIf="comparaison.rath.net <= comparaison.normal.net" style="color:#0ea5e9;">Normal</span>
+    </div>
   </div>
 </div>
